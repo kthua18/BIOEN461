@@ -1,0 +1,12 @@
+Download Python 3 from this website:
+https://www.python.org/download/releases/3.0.1/
+
+Use pip to install openCV and the Aruco libraries. If you open up the command prompt and type and run python -m pip . If it 
+does not exist, then you will need to install pip. Right click on the following link, and save it as a .py file.
+https://bootstrap.pypa.io/get-pip.py
+
+To finish downloading pip, in the command prompt go to the directory where get-pip.py is saved, and type and run 
+python get-pip.py . It does not matter where get-pip.py is saved.
+
+After you get Python 3 and pip, downloading openCV and aruco is very easy. Open the command window, and type and 
+run python -m pip install opencv-python opencv-contrib-python . Now you have everything you need to run the files.
