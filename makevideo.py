@@ -17,6 +17,7 @@ from cv2 import aruco, imshow, waitKey, imwrite
 import imutils
 from imutils import resize
 import sys
+import pickle
 
 aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
 parameters = aruco.DetectorParameters_create()
@@ -62,21 +63,29 @@ while True:
 
 
 # Values for Logitech HD Webcam C390
-retval = 1.0945845835272205
-
-cameraMatrix = np.array([[  1.17827738e+03,   0.00000000e+00,   1.86622709e+02],
-       [  0.00000000e+00,   1.13414958e+03,   3.47654849e+02],
-       [  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]])
-
-distCoeffs = np.array([[-0.01479509,  0.69136764,  0.00726789, -0.00518565, -1.881378  ]])
-
-rvecs = np.array([[ 2.2974803 ],
-       [ 2.07597976],
-       [ 0.25607078]])
-
-tvecs = np.array([[  0.68605559],
-       [ -4.74354269],
-       [ 17.78934125]])
+fileName = 'values.pckl'
+fileObject = open(fileName, 'r')
+objectValues = pickle.load(fileObject)
+cameraMatrix = objectValues[1]
+rvecs = objectValues[3]
+tvecs = objectValues[4]
+retval = objectValues[0]
+distCoeffs = objectValues[2]
+# retval = 1.0945845835272205
+#
+# cameraMatrix = np.array([[  1.17827738e+03,   0.00000000e+00,   1.86622709e+02],
+#        [  0.00000000e+00,   1.13414958e+03,   3.47654849e+02],
+#        [  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]])
+#
+# distCoeffs = np.array([[-0.01479509,  0.69136764,  0.00726789, -0.00518565, -1.881378  ]])
+#
+# rvecs = np.array([[ 2.2974803 ],
+#        [ 2.07597976],
+#        [ 0.25607078]])
+#
+# tvecs = np.array([[  0.68605559],
+#        [ -4.74354269],
+#        [ 17.78934125]])
 
 while True:
     ret, frame = cap.read()

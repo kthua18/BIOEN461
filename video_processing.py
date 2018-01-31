@@ -72,21 +72,28 @@ target_time2 = 31
 target_frame2 = target_time2 * frame_rate
 
 # Calibration values for LOGITECH C390 WEBCAM
-retval = 1.0945845835272205
+fileName = 'values.pckl'
+fileObject = open(fileName, 'r')
+objectValues = pickle.load(fileObject)
+cameraMatrix = objectValues[1]
+rvecs = objectValues[3]
+tvecs = objectValues[4]
+retval = objectValues[0]
+distCoeffs = objectValues[2]
 
-cameraMatrix = np.array([[  1.17827738e+03,   0.00000000e+00,   1.86622709e+02],
-       [  0.00000000e+00,   1.13414958e+03,   3.47654849e+02],
-       [  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]])
-
-distCoeffs = np.array([[-0.01479509,  0.69136764,  0.00726789, -0.00518565, -1.881378  ]])
-
-rvecs = np.array([[ 2.2974803 ],
-       [ 2.07597976],
-       [ 0.25607078]])
-
-tvecs = np.array([[  0.68605559],
-       [ -4.74354269],
-       [ 17.78934125]])
+# cameraMatrix = np.array([[  1.17827738e+03,   0.00000000e+00,   1.86622709e+02],
+#        [  0.00000000e+00,   1.13414958e+03,   3.47654849e+02],
+#        [  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]])
+#
+# distCoeffs = np.array([[-0.01479509,  0.69136764,  0.00726789, -0.00518565, -1.881378  ]])
+#
+# rvecs = np.array([[ 2.2974803 ],
+#        [ 2.07597976],
+#        [ 0.25607078]])
+#
+# tvecs = np.array([[  0.68605559],
+#        [ -4.74354269],
+#        [ 17.78934125]])
 
 m = 1.75
 b = 0.25

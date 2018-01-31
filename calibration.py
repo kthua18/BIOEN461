@@ -16,7 +16,7 @@ import imutils
 from imutils import resize
 import pickle
 import sys
-
+from variable_saver import save_function
 aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
 parameters = aruco.DetectorParameters_create()
 
@@ -79,5 +79,6 @@ retval, cameraMatrix, distCoeffs, rvecs, tvecs = aruco.calibrateCameraAruco(
 	None, 
 	None)
 
+save_function(retval, cameraMatrix, distCoeffs, rvecs, tvecs)
 cap.release()
 cv2.destroyAllWindows()
