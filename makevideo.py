@@ -8,7 +8,7 @@ Revision History:
 14 Nov 2017
     - First commit
 1 Jan 2018
-    - Refactored and cleaned up. INcluded user input for video title.
+    - Refactored and cleaned up. Included user input for video title.
 """
 
 import numpy as np
@@ -17,7 +17,10 @@ from cv2 import aruco, imshow, waitKey, imwrite
 import imutils
 from imutils import resize
 import sys
-import pickle
+import threading as th
+import speech_recognition as sr
+from gtts import gTTS
+import playsound
 
 aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
 parameters = aruco.DetectorParameters_create()
@@ -63,29 +66,67 @@ while True:
 
 
 # Values for Logitech HD Webcam C390
-fileName = 'values.pckl'
-fileObject = open(fileName, 'r')
-objectValues = pickle.load(fileObject)
-cameraMatrix = objectValues[1]
-rvecs = objectValues[3]
-tvecs = objectValues[4]
-retval = objectValues[0]
-distCoeffs = objectValues[2]
-# retval = 1.0945845835272205
-#
-# cameraMatrix = np.array([[  1.17827738e+03,   0.00000000e+00,   1.86622709e+02],
-#        [  0.00000000e+00,   1.13414958e+03,   3.47654849e+02],
-#        [  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]])
-#
-# distCoeffs = np.array([[-0.01479509,  0.69136764,  0.00726789, -0.00518565, -1.881378  ]])
-#
-# rvecs = np.array([[ 2.2974803 ],
-#        [ 2.07597976],
-#        [ 0.25607078]])
-#
-# tvecs = np.array([[  0.68605559],
-#        [ -4.74354269],
-#        [ 17.78934125]])
+retval = 1.0945845835272205
+
+cameraMatrix = np.array([[  1.17827738e+03,   0.00000000e+00,   1.86622709e+02],
+       [  0.00000000e+00,   1.13414958e+03,   3.47654849e+02],
+       [  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]])
+
+distCoeffs = np.array([[-0.01479509,  0.69136764,  0.00726789, -0.00518565, -1.881378  ]])
+
+rvecs = np.array([[ 2.2974803 ],
+       [ 2.07597976],
+       [ 0.25607078]])
+
+tvecs = np.array([[  0.68605559],
+       [ -4.74354269],
+       [ 17.78934125]])
+
+book_count = 0
+rx_count = 0
+phone_count = 0
+
+
+# obtain audio from the microphone
+stop_event = th.Event()
+ids = None
+
+def listen_for_speech():
+    r = sr.Recognizer()
+
+    with sr.Microphone() as source:
+        while not stop_event.is_set():
+            print("Say something!")
+            audio = r.listen(source) #, timeout=1)
+
+            # recognize speech using Google Cloud
+            try:
+                print("Google thinks you said: " + r.recognize_google(audio))
+                speech = r.recognize_google(audio)
+            except sr.UnknownValueError:
+                print("Google could not understand audio")
+                continue
+            except sr.RequestError as e:s
+                print("Google error; {0}".format(e))
+                continue
+
+            words = speech.split()
+
+            if "see" in words:
+                if ids is None:
+                    print("No IDs are visible.")
+                    say_shit("No IDs are found.")
+                else:
+                    
+                    print("I see ___", ids)
+
+def say_shit(shit):
+    tts = gTTS(text=shit, lang='en')
+    tts.save("shit.mp3")
+    playsound.playsound("shit.mp3", True)
+
+listener = th.Thread(target=listen_for_speech)
+listener.start()
 
 while True:
     ret, frame = cap.read()
@@ -107,13 +148,42 @@ while True:
         for i in range(ids.size):
             frame = aruco.drawAxis(frame, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 1.75)
 
+            """
+            if 11 in ids:
+                phone_count = phone_count + 1
+            elif 11 not in ids: 
+                phone_count = 0
+            if phone_count == 15:
+                print("Keys")
+
+            if 6 in ids:
+                rx_count = rx_count + 1
+            elif 6 not in ids: 
+                rx_count = 0
+            if rx_count == 15:
+                print("Medication")
+
+            if 23 in ids:
+                book_count = book_count + 1
+            elif 23 not in ids: 
+                book_count = 0
+            if book_count == 15:
+                print("Book")
+            """
+                
+            
+
     # Display the resulting frame
     cv2.imshow('Frame', frame)
  
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
+stop_event.set()
 cap.release()
 if record_video == 'Y' or record_video == 'y':
     out.release()
 cv2.destroyAllWindows()
+listener.join()
+
+#mainloop(  )
