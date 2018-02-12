@@ -47,27 +47,11 @@ while True:
         print("Sorry, I could not understand your answer.\n")
         continue
 
-# Values for Microsoft Surfacebook
-# retval = 2.431375118981137
 
-# cameraMatrix = np.array([[  8.72869151e+03,   0.00000000e+00,   1.18062331e+02],
-#        [  0.00000000e+00,   4.76770331e+03,   7.18543604e+02],
-#        [  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]])
-
-# distCoeffs = np.array([[5.41626489e+01, -5.23463507e+03,   9.54215751e-01,
-#           8.33360321e-01,   1.70888900e+05]])
-
-# rvecs = np.array([[ 2.55703378],
-#        [-2.33166903],
-#        [ 1.57673323]])c
-
-# tvecs = np.array([[  12.55476731],
-#        [  -2.91239633],
-#        [ 165.88258182]])
 
 
 # Values for Logitech HD Webcam C390
-fileName = 'values.pckl'
+fileName = 'values'
 fileObject = open(fileName, 'r')
 objectValues = pickle.load(fileObject)
 cameraMatrix = objectValues[1]
@@ -115,6 +99,14 @@ def listen_for_speech():
                 else:
                     
                     print("I see ___", ids)
+
+            if "help" in words:
+                found = False
+                while found is False:
+                if "keys" or "Medication" or "Book" in words:
+                    print("It is in your frame")
+
+
 
 def say_shit(shit):
     tts = gTTS(text=shit, lang='en')
