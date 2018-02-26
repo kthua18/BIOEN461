@@ -24,6 +24,8 @@ from __future__ import print_function
 import myo as libmyo; libmyo.init(r'C:\Users\Owner\Desktop\BIOEN 461\myo-sdk-win-0.9.0\myo-sdk-win-0.9.0\bin')
 import time
 import sys
+import numpy as np
+
 
 #inherits from
 class Listener(libmyo.DeviceListener):
@@ -35,7 +37,7 @@ class Listener(libmyo.DeviceListener):
     interval = 0.5  # Output only 0.05 seconds
 
     # constructor
-    def __init__(self):
+    def __init__(self, baseline, get_baseline):
         super(Listener, self).__init__()
         #fields declated here
         self.orientation = None
@@ -45,6 +47,10 @@ class Listener(libmyo.DeviceListener):
         self.rssi = None
         self.emg = None
         self.last_time = 0
+        #print('Baseline orientation (hold steady)')
+        #time.sleep(2)
+        #self.baseline = self.orientation.rpy
+        #print(self.baseline)
 
     def output(self):
         ctime = time.time()
@@ -54,8 +60,15 @@ class Listener(libmyo.DeviceListener):
 
         parts = []
         if self.orientation:
-            for comp in self.orientation:
-                parts.append(str(comp).ljust(10))
+            #(r,p,y) = self.orientation.rpy()
+            print(self.orientation.rpy)
+            #vect = self.get_vector()
+            #print(vect)
+            #for i, comp in enumerate(self.orientation):
+                #self.orientation is its own class myo.quaternion.Quaternion
+            #    parts.append(str(comp).ljust(10))
+                #print(type(comp))
+
         #parts.append(str(self.pose).ljust(10))
         #parts.append('E' if self.emg_enabled else ' ')
         #parts.append('L' if self.locked else ' ')
@@ -158,6 +171,16 @@ class Listener(libmyo.DeviceListener):
         Called when the warmup completed.
         """
 
+    def get_vector(self):
+        p = []
+        if self.orientation:
+            for i, comp in enumerate(self.orientation):
+                #self.orientation is its own class myo.quaternion.Quaternion
+                p.append(comp)
+            return np.array(p)
+        else:
+            return null
+
 
 def main():
     print("Connecting to Myo ... Use CTRL^C to exit.")
@@ -168,7 +191,9 @@ def main():
         return
 
     hub.set_locking_policy(libmyo.LockingPolicy.none)
-    hub.run(1000, Listener())
+    baseline = []
+    l = Listener(baseline, true)
+    hub.run(1000, l)
 
     # Listen to keyboard interrupts and stop the hub in that case.
     try:
