@@ -16,7 +16,7 @@ try:
     if hub.running and myo.connected:
         print('Collecting initial orientation...')
         print('Hold still')
-        time.sleep(2)
+        time.sleep(5)
         baseline = myo.orientation
         baseline_rpy = np.array(baseline.rpy)
         print(baseline_rpy)
@@ -25,9 +25,14 @@ try:
     while hub.running and myo.connected:
         quat = myo.orientation
         rpy = np.array(quat.rpy)
-        diff = baseline_rpy - rpy
-        print(diff)
-        time.sleep(0.5)
+        diff = baseline_rpy[1:2] - rpy[1:2]
+        diff_mag = np.square(diff)
+        diff_mag = np.sum(diff_mag)
+        diff_mag = np.sqrt(diff_mag)
+        print(diff_mag)
+        myo.vibrate("short")
+        delay = diff_mag * (1.2/6.5) + 0.3
+        time.sleep(delay)
 
 except KeyboardInterrupt:
     print("Quitting...")
