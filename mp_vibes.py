@@ -60,7 +60,8 @@ def play_tone(stream, frequency=440, length=0.1, rate=44100):
     chunk = np.concatenate(chunks) * 0.25
     stream.write(chunk.astype(np.float32).tostring())
 
-def many_beeps(interval):
+
+def beep_n_vibe(pos):
     p = pyaudio.PyAudio()
     # get that myo shit
     if USE_MYO:
@@ -72,10 +73,22 @@ def many_beeps(interval):
     stream = p.open(format=pyaudio.paFloat32,
                         channels=1, rate=44100, output=1)
     while True:
-        if interval.value > 0.0:
+        if pos.value > 0:
+            interval = timing(pos.value)
             play_tone(stream)
-            myo.vibrate("short")
-            time.sleep(interval.value)
+            if USE_MYO:
+                myo.vibrate("short")
+            time.sleep(interval)
+
+# params for function mapping input to frequency of beep/vibe
+ORDER = 2
+MIN_FT = 0.3
+SCALE = 1
+NORM = 1024
+
+def timing(pos):
+    interval = SCALE * (pos/NORM) ** (1/ORDER) + MIN_FT
+    return interval
 
 # Setting up voice recognition and TTS
 def listen_for_speech(speaker_data, stop_event, finder):
@@ -155,7 +168,7 @@ if __name__ == '__main__':
     parameters = aruco.DetectorParameters_create()
 
     # Set up USB camera
-    cap = cv2.VideoCapture(2) # To use laptop front cam, use 1. Back camera, use 2.
+    cap = cv2.VideoCapture(0) # To use laptop front cam, use 1. Back camera, use 2.
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
     # Asking user if they'd like to record a video
@@ -184,9 +197,9 @@ if __name__ == '__main__':
 
     with Manager() as manager:
     # Begin video
-        interval = Value('d', -1.0) # negative number means do NOT beep!!!
+        pos = Value('i', -1) # negative number means do NOT beep!!!
 
-        beeper = Process(target=many_beeps, args=(interval,))
+        beeper = Process(target=beep_n_vibe, args=(pos,))
         beeper.start()
 
         speaker_data = manager.dict(ids=None, corners=None)
@@ -198,8 +211,8 @@ if __name__ == '__main__':
 
         while True:
             ret, frame = cap.read()
-            # if frame is None:
-            #     continue
+            if frame is None:
+                 continue
 
             frame_copy = frame.copy()
             frame = resize(frame, width=1280)
@@ -211,7 +224,7 @@ if __name__ == '__main__':
             speaker_data["corners"] = corners
 
             if ids is None or not finder.value: # not in "find mode"
-                interval.value = -1.0
+                pos.value = -1
             else:
                 frame = aruco.drawDetectedMarkers(frame, corners, ids)
                 rvecs, tvecs, _ = aruco.estimatePoseSingleMarkers(corners, 1.75, cameraMatrix, distCoeffs, rvecs, tvecs)
@@ -223,27 +236,12 @@ if __name__ == '__main__':
 
                     # Beeps faster as the markerID=6 moves from left to right side of frame
                     # Vibes will be added later by Ben / Armin
-                    if 11 in ids:
-                        if corners[0][0][0][0] < 256:
-                            interval.value = 1
-                            print("vibe")
-                        if 256 <= corners[0][0][0][0] < 512:
-                            interval.value = 0.8
-                            print("vibe")
-                        if 512 <= corners[0][0][0][0] < 768:
-                            interval.value = 0.6
-                            print("vibe")
-                        if 786 <= corners[0][0][0][0] < 1024:
-                            interval.value = 0.4
-                            print("vibe")
-                        if 1024 <= corners[0][0][0][0] < 1280:
-                            interval.value = 0.15
-                            print("vibe")
 
+                    if 11 in ids:
+                        pos.value = speaker_data["corners"][0][0][0][0]
 
             # Display the resulting frame
             cv2.imshow('Frame', frame)
-
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
