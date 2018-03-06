@@ -29,6 +29,7 @@ import playsound
 import time
 import pickle
 import feed
+from multiprocessing import Process
 
 # params for function mapping input to frequency of beep/vibe
 ORDER = 2
@@ -82,7 +83,7 @@ def beep_n_vibe(m, stream, param, last_time, frequency=440, length=0.1, rate=441
         return last_time
 
 # Setting up voice recognition and TTS
-def listen_for_speech():
+def listen_for_speech(): #This is one thing that is running
     r = sr.Recognizer()
 
     with sr.Microphone() as source:
@@ -169,7 +170,7 @@ ids = None
 
 p = pyaudio.PyAudio()
 stream = p.open(format=pyaudio.paFloat32,
-                    channels=1, rate=44100, output=1)
+                        channels=1, rate=44100, output=1)
 
 (hub, myo) = feed.setup()
 print(hub)
@@ -177,58 +178,59 @@ print(myo)
 myo.vibrate("long")
 # Begin video
 lt = 0
-try:
-    while True:
-        ret, frame = cap.read()
-        if frame is None:
-             continue
+def taking_video():
+    try: #this is one thing that can work
+        while True:
+            ret, frame = cap.read()
+            if frame is None:
+                 continue
 
-        frame_copy = frame.copy()
-        frame = resize(frame, width=1280)
+            frame_copy = frame.copy()
+            frame = resize(frame, width=1280)
 
-        # lists of ids and the corners beloning to each id
-        corners, ids, rejected = aruco.detectMarkers(frame, aruco_dict, parameters=parameters)
+            # lists of ids and the corners beloning to each id
+            corners, ids, rejected = aruco.detectMarkers(frame, aruco_dict, parameters=parameters)
 
-        if ids is not None:
-            frame = aruco.drawDetectedMarkers(frame, corners, ids)
-            rvecs, tvecs, _ = aruco.estimatePoseSingleMarkers(corners, 1.75, cameraMatrix, distCoeffs, rvecs, tvecs)
+            if ids is not None:
+                frame = aruco.drawDetectedMarkers(frame, corners, ids)
+                rvecs, tvecs, _ = aruco.estimatePoseSingleMarkers(corners, 1.75, cameraMatrix, distCoeffs, rvecs, tvecs)
 
-            for i in range(ids.size):
-                frame = aruco.drawAxis(frame, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 1.75)
-                if record_video == 'Y' or record_video == 'y':
-                     out.write(frame)
+                for i in range(ids.size):
+                    frame = aruco.drawAxis(frame, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 1.75)
+                    if record_video == 'Y' or record_video == 'y':
+                         out.write(frame)
 
-                # Beeps faster as the markerID=6 moves from left to right side of frame
-                '''
-                if 6 in ids:
-                    if corners[0][0][0][0] < 256:
-                        play_tone(stream, 1)
-                    if corners[0][0][0][0] < 512 and corners[0][0][0][0] >= 256:
-                        play_tone(stream, 0.8)
-                    if corners[0][0][0][0] < 768 and corners[0][0][0][0] >= 512:
-                        play_tone(stream, 0.6)
-                    if corners[0][0][0][0] < 1024 and corners[0][0][0][0] >= 768:
-                        play_tone(stream, 0.4)
-                    if corners[0][0][0][0] < 1280 and corners[0][0][0][0] >=1024:
-                        play_tone(stream, 0.15)
-                '''
-            #lt = feed.send_vibe(myo, corners[0][0][0][0], lt)
-            lt = beep_n_vibe(myo, stream, corners[0][0][0][0], lt)
-        # Display the resulting frame
-        cv2.imshow('Frame', frame)
+                    # Beeps faster as the markerID=6 moves from left to right side of frame
+                    '''
+                    if 6 in ids:
+                        if corners[0][0][0][0] < 256:
+                            play_tone(stream, 1)
+                        if corners[0][0][0][0] < 512 and corners[0][0][0][0] >= 256:
+                            play_tone(stream, 0.8)
+                        if corners[0][0][0][0] < 768 and corners[0][0][0][0] >= 512:
+                            play_tone(stream, 0.6)
+                        if corners[0][0][0][0] < 1024 and corners[0][0][0][0] >= 768:
+                            play_tone(stream, 0.4)
+                        if corners[0][0][0][0] < 1280 and corners[0][0][0][0] >=1024:
+                            play_tone(stream, 0.15)
+                    '''
+                #lt = feed.send_vibe(myo, corners[0][0][0][0], lt)
+                lt = beep_n_vibe(myo, stream, corners[0][0][0][0], lt)
+            # Display the resulting frame
+            cv2.imshow('Frame', frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
-except KeyboardInterrupt:
-    print("Quitting...")
-finally:
-    hub.shutdown()
-    stop_event.set()
-    cap.release()
-    if record_video == 'Y' or record_video == 'y':
-        out.release()
-    cv2.destroyAllWindows()
-    #listener.join()
+    except KeyboardInterrupt:
+        print("Quitting...")
+    finally:
+        hub.shutdown()
+        stop_event.set()
+        cap.release()
+        if record_video == 'Y' or record_video == 'y':
+            out.release()
+        cv2.destroyAllWindows()
+        #listener.join()
 
 #mainloop(  )
