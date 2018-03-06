@@ -115,16 +115,19 @@ def listen_for_speech(speaker_data, stop_event, finder):
                 if speaker_data["ids"] is None:
                     print("No IDs are visible.")
                     say_shit("I do not see any IDs.")
-                elif 11 in speaker_data["ids"]:
-                    if speaker_data["corners"][0][0][0][0] >= 500:
-                        print("There are keys are to your right")
-                        say_shit("There are keys to your right")
-                    elif speaker_data["corners"][0][0][0][0] < 780:
-                        print("There are keys are to your left")
-                        say_shit("There are keys to your left")
-                    else:
-                        print("There are keys are straight ahead")
-                        say_shit("There are keys straight ahead")
+                else:
+                    count = 0
+                    for x in speaker_data["ids"]:
+                        if speaker_data["corners"][count][0][0][0] >= 500:
+                            print("There are " + x + " are to your right")
+                            say_shit("There are" + x + "to your right")
+                        elif speaker_data["corners"][count][0][0][0] < 780:
+                            print("There are" + x + " to your left")
+                            say_shit("There are" + x + "to your left")
+                        else:
+                            print("There are " + x + " straight ahead")
+                            say_shit("There are" + x + " straight ahead")
+                        count = count + 1
 
             if "find" in words:
                 finder.value = True
