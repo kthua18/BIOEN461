@@ -14,6 +14,10 @@ Revision History:
     - NO threading
 4 Mar 2018
     - Fucking finally got multiprocessing to work
+6 Mar 2018
+    - Used enum for declaring camera state
+    - added dictionary of ID --> objects
+    - added dictionary of objects --> ID
 """
 
 import numpy as np
@@ -32,6 +36,7 @@ import pickle
 from multiprocessing import Process, Manager, Value, Event
 import os
 import tempfile
+from enum import Enum
 
 # Values from pickle file
 # fileName = 'values'
@@ -42,6 +47,11 @@ import tempfile
 # tvecs = objectValues[4]
 # retval = objectValues[0]
 # distCoeffs = objectValues[2]
+
+class ListenerState(Enum):
+    IDLE = 0
+    SEE = 1
+    FIND = 2
 
 # Setting up tone generation
 def sine(frequency, length, rate):
@@ -66,11 +76,20 @@ def many_beeps(interval):
             time.sleep(interval.value)
 
 # Setting up voice recognition and TTS
-def listen_for_speech(speaker_data, stop_event, finder):
+def listen_for_speech(speaker_data, stop_event, finder, targetObj):
     r = sr.Recognizer()
+    # print(r.energy_threshold)
+    r.dynamic_energy_threshold = False
+    r.energy_threshold = 400
 
     shit_count = 1
     temp = tempfile.TemporaryDirectory()
+    
+    objectDict = {0:'keys', 2:'ibuprofen', 6:'aspirin', 11:'ibuprofen', 23:'phone', 24:'water'}
+    idDict = {'keys':0, 'ibuprofen':2, 'aspirin':6, 'something':11, 'phone':23, 'water':24}
+
+    current_state = ListenerState.IDLE
+
     def say_shit(shit):
         nonlocal shit_count
         tts = gTTS(text=shit, lang='en')
@@ -83,7 +102,7 @@ def listen_for_speech(speaker_data, stop_event, finder):
     with sr.Microphone() as source:
         while not stop_event.is_set():
             print("Say something!")
-            audio = r.listen(source) #, timeout=1)
+            audio = r.listen(source)
 
             # recognize speech using Google Cloud
             try:
@@ -97,27 +116,40 @@ def listen_for_speech(speaker_data, stop_event, finder):
                 continue
 
             words = speech.split()
-
-            # Season to fill this in with more sophisticated object tracking later!!
+    
             if "see" in words:
+                current_state = ListenerState.SEE
+                print(current_state)
+            if "find" in words:
+                current_state = ListenerState.FIND
+                print(current_state)
+            if "found" in words:
+                current_state = ListenerState.IDLE
+                print(current_state)
+
+            if current_state == ListenerState.SEE:
                 if speaker_data["ids"] is None:
                     print("No IDs are visible.")
                     say_shit("I do not see any IDs.")
-                elif 11 in speaker_data["ids"]:
-                    if speaker_data["corners"][0][0][0][0] >= 500:
-                        print("There are keys are to your right")
-                        say_shit("There are keys to your right")
-                    elif speaker_data["corners"][0][0][0][0] < 780:
-                        print("There are keys are to your left")
-                        say_shit("There are keys to your left")
-                    else:
-                        print("There are keys are straight ahead")
-                        say_shit("There are keys straight ahead")
-
-            if "find" in words:
+                else:
+                    for i in range(speaker_data["ids"].size):
+                        if speaker_data["corners"][i][0][0][0] <= 500:
+                            print("%s to your left" %(objectDict[speaker_data["ids"][i][0]]))
+                            say_shit("%s to your left" %(objectDict[speaker_data["ids"][i][0]]))
+                        elif speaker_data["corners"][i][0][0][0] > 780:
+                            print("%s to your right" %(objectDict[speaker_data["ids"][i][0]]))
+                            say_shit("%s to your right" %(objectDict[speaker_data["ids"][i][0]]))
+                        else:
+                            print("%s straight ahead" %(objectDict[speaker_data["ids"][i][0]]))
+                            say_shit("%s straight" %(objectDict[speaker_data["ids"][i][0]]))
+ 
+            if current_state == ListenerState.FIND:
                 finder.value = True
-
-            if "found" in words:
+                for i in range(len(words)):
+                    if (words[i] in idDict.keys()):
+                        targetObj.value = idDict[words[i]]
+               
+            if current_state == ListenerState.IDLE:
                 finder.value = False
 
 if __name__ == '__main__':
@@ -146,6 +178,7 @@ if __name__ == '__main__':
     cap = cv2.VideoCapture(2) # To use laptop front cam, use 1. Back camera, use 2.
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
     # Asking user if they'd like to record a video
     while True:
         record_video = input("Would you like to make a video? (Y/N) ")
@@ -167,6 +200,7 @@ if __name__ == '__main__':
     # obtain audio from the microphone
     stop_event = Event()
     ids = None
+    handID = 5
 
     with Manager() as manager:
     # Begin video
@@ -177,14 +211,16 @@ if __name__ == '__main__':
         speaker_data = manager.dict(ids=None, corners=None)
 
         finder = Value('b', False)
+        
+        targetObj = Value('i', 0)
 
-        speaker = Process(target=listen_for_speech, args=(speaker_data, stop_event, finder))
+        speaker = Process(target=listen_for_speech, args=(speaker_data, stop_event, finder, targetObj))
         speaker.start()
-
+        
         while True:
             ret, frame = cap.read()
-            # if frame is None:
-            #     continue
+            if frame is None:
+                continue
 
             frame_copy = frame.copy()
             frame = resize(frame, width=1280)
@@ -203,27 +239,30 @@ if __name__ == '__main__':
                 
                 for i in range(ids.size):
                     frame = aruco.drawAxis(frame, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 1.75)
+                    # print(ids)
+                    # print(corners)
                     if record_video == 'Y' or record_video == 'y':
                          out.write(frame)
 
-                    # Beeps faster as the markerID=6 moves from left to right side of frame
-                    # Vibes will be added later by Ben / Armin
-                    if 11 in ids:
-                        if corners[0][0][0][0] < 256:
-                            interval.value = 1
-                            print("vibe")
-                        if 256 <= corners[0][0][0][0] < 512:
-                            interval.value = 0.8
-                            print("vibe")
-                        if 512 <= corners[0][0][0][0] < 768:
-                            interval.value = 0.6
-                            print("vibe")
-                        if 786 <= corners[0][0][0][0] < 1024:
-                            interval.value = 0.4
-                            print("vibe")
-                        if 1024 <= corners[0][0][0][0] < 1280:
-                            interval.value = 0.15
-                            print("vibe")
+                # Beeps faster as the markerID=6 moves from left to right side of frame
+                # Vibes will be added later by Ben / Armin
+                if targetObj.value in ids and handID in ids:
+                    x_dist = corners[0][0][0][0] - corners[1][0][0][0]
+                    y_dist = corners[0][0][0][1] - corners[1][0][0][1]
+                    length = math.sqrt( (x_dist)**2 + (y_dist)**2 )
+
+                    if length < 256: # corners[0][0][0][0]
+                        interval.value = 0.2
+                    if 256 <= length < 512:
+                        interval.value = 0.6
+                    if 512 <= length < 768:
+                        interval.value = 0.6
+                    if 786 <= length < 1024:
+                        interval.value = 0.8
+                    if 1024 <= length < 1280:
+                        interval.value = 1.0
+                else:
+                    interval.value = -1.0
 
                     
             # Display the resulting frame
@@ -241,5 +280,6 @@ if __name__ == '__main__':
 
     beeper.join()
     speaker.join()
+
 
 
