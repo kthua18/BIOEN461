@@ -15,3 +15,9 @@ You can write a message and commit at the same time by typing git commit -m 'thi
 To sync your new commit(s) to Github, you type git push then type your Github credentials in the prompt.
 
 To fetch the latest changes and synchronize your repo with Github, type git pull.
+
+git add -A
+git commit -m 'message'
+git push
+
+git pull
